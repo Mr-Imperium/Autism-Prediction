@@ -19,7 +19,8 @@ def preprocess_input(input_data, feature_columns, scaler):
     # Convert input to DataFrame
     df = pd.DataFrame([input_data])
     
-    # Create a full DataFrame with all expected columns
+    # Ensure the DataFrame has the correct columns
+    # First, create a full DataFrame with all expected columns
     full_df = pd.DataFrame(columns=feature_columns)
     
     # Copy input data to full DataFrame
@@ -27,11 +28,24 @@ def preprocess_input(input_data, feature_columns, scaler):
         if col in feature_columns:
             full_df[col] = input_data[col]
     
-    # Fill any missing columns with 0
-    full_df = full_df.fillna(0)
+    # Verify and handle missing columns
+    missing_columns = set(feature_columns) - set(full_df.columns)
+    for col in missing_columns:
+        # Fill missing columns with appropriate default values
+        if col.endswith('Score'):
+            full_df[col] = 0  # Default score to 0
+        elif col == 'age':
+            full_df[col] = input_data.get('age', 25)  # Default age to 25 if not provided
+        elif col in ['gender', 'jaundice', 'austim', 'used_app_before', 'ageGroup']:
+            # For categorical columns, use the mode or a default value
+            full_df[col] = input_data.get(col, 'unknown')
+        else:
+            full_df[col] = 0  # Default to 0 for other numeric columns
     
-    # Perform necessary transformations
-    # Log transform age
+    # Ensure correct order of columns
+    full_df = full_df[feature_columns]
+    
+    # Log transform age (add 1 to avoid log(0))
     full_df['age'] = np.log(full_df['age'] + 1)
     
     # Label encoding for categorical variables
@@ -40,15 +54,17 @@ def preprocess_input(input_data, feature_columns, scaler):
         le = LabelEncoder()
         full_df[col] = le.fit_transform(full_df[col].astype(str))
     
-    # Ensure correct order of columns
-    full_df = full_df[feature_columns]
-    
     # Impute and scale
-    imputer = SimpleImputer(strategy='mean')
-    df_imputed = imputer.fit_transform(full_df)
-    df_scaled = scaler.transform(df_imputed)
-    
-    return df_scaled
+    try:
+        imputer = SimpleImputer(strategy='mean')
+        df_imputed = imputer.fit_transform(full_df)
+        df_scaled = scaler.transform(df_imputed)
+        return df_scaled
+    except ValueError as e:
+        st.error(f"Error in preprocessing: {e}")
+        st.error("Input data: " + str(input_data))
+        st.error("Processed DataFrame: " + str(full_df))
+        raise
 
 def main():
     st.title('Autism Spectrum Disorder Prediction')
