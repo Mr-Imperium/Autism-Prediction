@@ -98,3 +98,7 @@ The dataset includes various features related to:
 ## License
 
 [MIT]
+Summary:
+Developed a machine learning solution for Autism Spectrum Disorder prediction using ensemble techniques, 
+achieving 85% accuracy across multiple classification algorithms (Logistic Regression, XGBoost, SVM). 
+Created an interactive Streamlit web application for real-time ASD screening with advanced data preprocessing.
