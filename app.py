@@ -2,6 +2,7 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder 
 
 # Load the saved model and scaler
 def load_model():
@@ -13,7 +14,7 @@ def load_model():
     scaler = joblib.load('feature_scaler.joblib')
     feature_columns = joblib.load('feature_columns.joblib')
     return models, scaler, feature_columns
-
+    
 # Preprocess input data
 def preprocess_input(input_data, scaler, feature_columns):
     # Convert input to DataFrame
