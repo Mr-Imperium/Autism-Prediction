@@ -10,6 +10,7 @@ from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+from sklearn.impute import SimpleImputer
 import joblib
 import os
 
@@ -79,21 +80,26 @@ def prepare_data(df):
     # Split the data
     X_train, X_val, Y_train, Y_val = train_test_split(features, target, test_size=0.2, random_state=10)
     
+    # Impute missing values
+    imputer = SimpleImputer(strategy='mean')
+    X_train_imputed = imputer.fit_transform(X_train)
+    X_val_imputed = imputer.transform(X_val)
+    
     # Oversample minority class
     ros = RandomOverSampler(sampling_strategy='minority', random_state=0)
-    X, Y = ros.fit_resample(X_train, Y_train)
+    X_resampled, Y_resampled = ros.fit_resample(X_train_imputed, Y_train)
     
     # Scale features
     scaler = StandardScaler()
-    X = scaler.fit_transform(X)
-    X_val = scaler.transform(X_val)
+    X_scaled = scaler.fit_transform(X_resampled)
+    X_val_scaled = scaler.transform(X_val_imputed)
     
-    return X, Y, X_val, Y_val, scaler, features.columns
+    return X_scaled, Y_resampled, X_val_scaled, Y_val, scaler, X_train.columns
 
 def train_and_save_models(X, Y, X_val, Y_val):
     # Define models
     models = {
-        'logistic_regression': LogisticRegression(),
+        'logistic_regression': LogisticRegression(max_iter=1000),
         'xgboost': XGBClassifier(),
         'svm': SVC(kernel='rbf', probability=True)
     }
@@ -130,7 +136,7 @@ def main():
     # Prepare data
     X, Y, X_val, Y_val, scaler, feature_columns = prepare_data(df)
     
-    # Save scaler and feature columns
+    # Save scaler, feature columns, and label encoder
     joblib.dump(scaler, os.path.join(working_dir, 'feature_scaler.joblib'))
     joblib.dump(feature_columns.tolist(), os.path.join(working_dir, 'feature_columns.joblib'))
     

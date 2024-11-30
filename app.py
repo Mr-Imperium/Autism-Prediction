@@ -19,6 +19,18 @@ def preprocess_input(input_data, feature_columns, scaler):
     # Convert input to DataFrame
     df = pd.DataFrame([input_data], columns=feature_columns)
     
+    # Ensure all original feature columns are present with default values if missing
+    for col in feature_columns:
+        if col not in df.columns:
+            # Add missing columns with default values
+            if df[col].dtype == 'object':
+                df[col] = 0  # Default for categorical
+            else:
+                df[col] = 0.0  # Default for numeric
+    
+    # Reorder columns to match training data
+    df = df[feature_columns]
+    
     # Perform necessary transformations
     # Age log transformation (add 1 to avoid log(0))
     df['age'] = np.log(df['age'] + 1)
