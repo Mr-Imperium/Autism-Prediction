@@ -2,38 +2,34 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder 
+from sklearn.preprocessing import LabelEncoder
 
-# Load the saved model and scaler
+# Load the saved model and feature columns
 def load_model():
     models = {
-        'Logistic Regression': joblib.load('logistic_regression_model.joblib'),
-        'XGBoost': joblib.load('xgboost_model.joblib'),
-        'SVM': joblib.load('svm_model.joblib')
+        'Logistic Regression': joblib.load('logistic_regression_pipeline.joblib'),
+        'XGBoost': joblib.load('xgboost_pipeline.joblib'),
+        'SVM': joblib.load('svm_pipeline.joblib')
     }
-    scaler = joblib.load('feature_scaler.joblib')
     feature_columns = joblib.load('feature_columns.joblib')
-    return models, scaler, feature_columns
-    
+    return models, feature_columns
+
 # Preprocess input data
-def preprocess_input(input_data, scaler, feature_columns):
+def preprocess_input(input_data, feature_columns):
     # Convert input to DataFrame
     df = pd.DataFrame([input_data], columns=feature_columns)
     
     # Perform necessary transformations
-    # Age log transformation
-    df['age'] = np.log(df['age'])
+    # Age log transformation (add 1 to avoid log(0))
+    df['age'] = np.log(df['age'] + 1)
     
     # Label encoding for categorical variables
     categorical_columns = df.select_dtypes(include=['object']).columns
     for col in categorical_columns:
         le = LabelEncoder()
-        df[col] = le.fit_transform(df[col])
+        df[col] = le.fit_transform(df[col].astype(str))
     
-    # Scale features
-    scaled_data = scaler.transform(df)
-    
-    return scaled_data
+    return df
 
 def main():
     st.title('Autism Spectrum Disorder Prediction')
@@ -46,7 +42,7 @@ def main():
     )
     
     # Load models
-    models, scaler, feature_columns = load_model()
+    models, feature_columns = load_model()
     
     # Create input fields dynamically based on feature columns
     input_data = {}
@@ -74,15 +70,21 @@ def main():
         for i in range(6, 11):
             input_data[f'A{i}_Score'] = st.number_input(f'A{i} Score', min_value=0, max_value=10, value=0)
     
+    # Additional feature engineering
+    input_data['sum_score'] = sum(input_data[f'A{i}_Score'] for i in range(1, 11))
+    input_data['ind'] = (1 if input_data['austim'] == 'yes' else 0) + \
+                        (1 if input_data['used_app_before'] == 'yes' else 0) + \
+                        (1 if input_data['jaundice'] == 'yes' else 0)
+    
     # Prediction button
     if st.button('Predict'):
         # Preprocess input
-        processed_input = preprocess_input(input_data, scaler, feature_columns)
+        processed_input = preprocess_input(input_data, feature_columns)
         
         # Make prediction
-        model = models[model_choice]
-        prediction = model.predict(processed_input)
-        prediction_proba = model.predict_proba(processed_input)
+        model_pipeline = models[model_choice]
+        prediction = model_pipeline.predict(processed_input)
+        prediction_proba = model_pipeline.predict_proba(processed_input)
         
         # Display results
         st.subheader('Prediction Results')
