@@ -19,30 +19,44 @@ def preprocess_input(input_data, feature_columns, scaler):
     # Convert input to DataFrame
     df = pd.DataFrame([input_data])
     
-    # Ensure the DataFrame has the correct columns
-    # First, create a full DataFrame with all expected columns
+    # Create a full DataFrame with all expected feature columns
     full_df = pd.DataFrame(columns=feature_columns)
     
-    # Copy input data to full DataFrame
-    for col in input_data.keys():
-        if col in feature_columns:
-            full_df[col] = input_data[col]
-    
-    # Verify and handle missing columns
-    missing_columns = set(feature_columns) - set(full_df.columns)
-    for col in missing_columns:
-        # Fill missing columns with appropriate default values
-        if col.endswith('Score'):
-            full_df[col] = 0  # Default score to 0
+    # Map input data to feature columns, handling potential mismatches
+    for col in feature_columns:
+        # Handle score columns
+        if col.startswith('A') and col.endswith('_Score'):
+            full_df[col] = input_data.get(col, 0)
+        
+        # Handle specific known columns
         elif col == 'age':
-            full_df[col] = input_data.get('age', 25)  # Default age to 25 if not provided
-        elif col in ['gender', 'jaundice', 'austim', 'used_app_before', 'ageGroup']:
-            # For categorical columns, use the mode or a default value
-            full_df[col] = input_data.get(col, 'unknown')
+            full_df[col] = input_data.get('age', 25.0)
+        elif col == 'gender':
+            full_df[col] = input_data.get('gender', 'unknown')
+        elif col == 'jaundice':
+            full_df[col] = input_data.get('jaundice', 'no')
+        elif col == 'austim':
+            full_df[col] = input_data.get('austim', 'no')
+        elif col == 'used_app_before':
+            full_df[col] = input_data.get('used_app_before', 'no')
+        elif col == 'result':
+            full_df[col] = input_data.get('result', 0.0)
+        elif col == 'ageGroup':
+            full_df[col] = input_data.get('ageGroup', 'Young')
+        elif col == 'sum_score':
+            full_df[col] = input_data.get('sum_score', 0)
+        elif col == 'ind':
+            full_df[col] = input_data.get('ind', 0)
+        
+        # Handle columns not in input data
         else:
-            full_df[col] = 0  # Default to 0 for other numeric columns
+            # For missing columns, fill with a default value
+            if full_df[col].dtype == 'object':
+                full_df[col] = 'unknown'
+            else:
+                full_df[col] = 0
     
-    # Ensure correct order of columns
+    # Ensure the DataFrame is not empty and has the correct columns
     full_df = full_df[feature_columns]
     
     # Log transform age (add 1 to avoid log(0))
@@ -60,10 +74,11 @@ def preprocess_input(input_data, feature_columns, scaler):
         df_imputed = imputer.fit_transform(full_df)
         df_scaled = scaler.transform(df_imputed)
         return df_scaled
-    except ValueError as e:
+    except Exception as e:
         st.error(f"Error in preprocessing: {e}")
         st.error("Input data: " + str(input_data))
         st.error("Processed DataFrame: " + str(full_df))
+        st.error("Feature Columns: " + str(feature_columns))
         raise
 
 def main():
