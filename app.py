@@ -16,51 +16,47 @@ def load_model():
     return models, feature_columns, scaler
 
 def preprocess_input(input_data, feature_columns, scaler):
-    # Convert input to DataFrame
-    df = pd.DataFrame([input_data])
+    # Create a dictionary to store processed input
+    processed_input = {}
     
-    # Create a full DataFrame with all expected feature columns
-    full_df = pd.DataFrame(columns=feature_columns)
-    
-    # Map input data to feature columns, handling potential mismatches
+    # Explicitly handle each expected feature column
     for col in feature_columns:
-        # Handle score columns
         if col.startswith('A') and col.endswith('_Score'):
-            full_df[col] = input_data.get(col, 0)
-        
-        # Handle specific known columns
+            # Handle score columns
+            processed_input[col] = input_data.get(col, 0)
         elif col == 'age':
-            full_df[col] = input_data.get('age', 25.0)
+            processed_input[col] = np.log(float(input_data.get('age', 25.0)) + 1)
         elif col == 'gender':
-            full_df[col] = input_data.get('gender', 'unknown')
+            processed_input[col] = input_data.get('gender', 'unknown')
         elif col == 'jaundice':
-            full_df[col] = input_data.get('jaundice', 'no')
+            processed_input[col] = input_data.get('jaundice', 'no')
         elif col == 'austim':
-            full_df[col] = input_data.get('austim', 'no')
+            processed_input[col] = input_data.get('austim', 'no')
         elif col == 'used_app_before':
-            full_df[col] = input_data.get('used_app_before', 'no')
+            processed_input[col] = input_data.get('used_app_before', 'no')
+        elif col == 'ethnicity':
+            processed_input[col] = input_data.get('ethnicity', 'unknown')
+        elif col == 'contry_of_res':
+            processed_input[col] = input_data.get('contry_of_res', 'unknown')
+        elif col == 'relation':
+            processed_input[col] = input_data.get('relation', 'unknown')
         elif col == 'result':
-            full_df[col] = input_data.get('result', 0.0)
+            processed_input[col] = float(input_data.get('result', 0.0))
         elif col == 'ageGroup':
-            full_df[col] = input_data.get('ageGroup', 'Young')
+            processed_input[col] = input_data.get('ageGroup', 'Young')
         elif col == 'sum_score':
-            full_df[col] = input_data.get('sum_score', 0)
+            processed_input[col] = int(input_data.get('sum_score', 0))
         elif col == 'ind':
-            full_df[col] = input_data.get('ind', 0)
-        
-        # Handle columns not in input data
+            processed_input[col] = int(input_data.get('ind', 0))
         else:
-            # For missing columns, fill with a default value
-            if full_df[col].dtype == 'object':
-                full_df[col] = 'unknown'
-            else:
-                full_df[col] = 0
+            # Default for any unexpected columns
+            processed_input[col] = 0
     
-    # Ensure the DataFrame is not empty and has the correct columns
+    # Convert to DataFrame
+    full_df = pd.DataFrame([processed_input])
+    
+    # Ensure correct column order
     full_df = full_df[feature_columns]
-    
-    # Log transform age (add 1 to avoid log(0))
-    full_df['age'] = np.log(full_df['age'] + 1)
     
     # Label encoding for categorical variables
     categorical_columns = full_df.select_dtypes(include=['object']).columns
