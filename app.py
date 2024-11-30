@@ -7,9 +7,9 @@ from sklearn.preprocessing import LabelEncoder
 # Load the saved model and feature columns
 def load_model():
     models = {
-        'Logistic Regression': joblib.load('logistic_regression_pipeline.joblib'),
-        'XGBoost': joblib.load('xgboost_pipeline.joblib'),
-        'SVM': joblib.load('svm_pipeline.joblib')
+        'Logistic Regression': joblib.load('logistic_regression_model.joblib'),
+        'XGBoost': joblib.load('xgboost_model.joblib'),
+        'SVM': joblib.load('svm_model.joblib')
     }
     feature_columns = joblib.load('feature_columns.joblib')
     return models, feature_columns
