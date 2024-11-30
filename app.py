@@ -3,8 +3,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+from sklearn.impute import SimpleImputer
 
-# Load the saved model and feature columns
 def load_model():
     models = {
         'Logistic Regression': joblib.load('logistic_regression_model.joblib'),
@@ -12,10 +12,10 @@ def load_model():
         'SVM': joblib.load('svm_model.joblib')
     }
     feature_columns = joblib.load('feature_columns.joblib')
-    return models, feature_columns
+    scaler = joblib.load('feature_scaler.joblib')
+    return models, feature_columns, scaler
 
-# Preprocess input data
-def preprocess_input(input_data, feature_columns):
+def preprocess_input(input_data, feature_columns, scaler):
     # Convert input to DataFrame
     df = pd.DataFrame([input_data], columns=feature_columns)
     
@@ -29,7 +29,14 @@ def preprocess_input(input_data, feature_columns):
         le = LabelEncoder()
         df[col] = le.fit_transform(df[col].astype(str))
     
-    return df
+    # Handle potential NaN values
+    imputer = SimpleImputer(strategy='mean')
+    df_imputed = imputer.fit_transform(df)
+    
+    # Scale the features
+    df_scaled = scaler.transform(df_imputed)
+    
+    return df_scaled
 
 def main():
     st.title('Autism Spectrum Disorder Prediction')
@@ -42,7 +49,7 @@ def main():
     )
     
     # Load models
-    models, feature_columns = load_model()
+    models, feature_columns, scaler = load_model()
     
     # Create input fields dynamically based on feature columns
     input_data = {}
@@ -79,7 +86,7 @@ def main():
     # Prediction button
     if st.button('Predict'):
         # Preprocess input
-        processed_input = preprocess_input(input_data, feature_columns)
+        processed_input = preprocess_input(input_data, feature_columns, scaler)
         
         # Make prediction
         model_pipeline = models[model_choice]
